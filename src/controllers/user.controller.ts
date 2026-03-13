@@ -1,0 +1,119 @@
+import { UserRepositoryMySQL } from '../repositories/user.repository';
+import { UserService } from '../services/user.service';
+import { Request, Response, NextFunction } from 'express';
+import { UserCreateDto } from "../dtos/user/create-user.dto";
+import { validate } from "class-validator";
+import { IResponse } from '../dtos/success-response.dto';
+import { UserResponseDto } from '../dtos/user/response-user.dto';
+import { BadRequestError } from '../errors/bad-request.error';
+import { UserUpdateDto } from '../dtos/user/update-user.dto';
+import { userToUserResponseDto } from '../mappers/user.mapper'
+import { User } from '../database/entities/user.entity';
+import { RedisCacheProvider } from '../infra/cache/redis-cache.provider';
+
+const repository = new UserRepositoryMySQL();
+const cacheProvider = new RedisCacheProvider();
+const service = new UserService(repository, cacheProvider);
+
+export class UserController {
+
+    async getAllUsers(req: Request, res: Response, next: NextFunction) {
+        try {
+            const users = await service.getAll();
+
+            const usersDto: UserResponseDto[] = users!.map((user) => {
+                return userToUserResponseDto(user)
+            })
+
+            const response: IResponse<UserResponseDto> = {
+                status: 200,
+                message: 'Users retrieved successfully',
+                data: usersDto
+            };
+
+            res.status(200).json(response);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async createUser(req: Request, res: Response, next: NextFunction) {
+        try {
+            const dto = Object.assign(new UserCreateDto(), req.body);
+            const errors = await validate(dto);
+            
+            if (errors.length) {
+                throw new BadRequestError({ message: 'Validation failed', errors });
+            }
+
+            const result: User = await service.create(dto);
+            const user: UserResponseDto = userToUserResponseDto(result);
+            const response: IResponse<UserResponseDto> = {
+                status: 201,
+                message: 'User created successfully',
+                data: user
+            };
+            
+            res.status(201).json(response);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async findUser(req: Request, res: Response, next: NextFunction) {
+        try {
+            const userId = parseInt(req.params.id, 10);
+            const user = await service.findById(userId);
+            const userDto: UserResponseDto = userToUserResponseDto(user);
+            const response: IResponse<UserResponseDto> = {
+                status: 200,
+                message: 'User retrieved successfully',
+                data: userDto
+            };
+            res.status(200).json(response);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async updateUser(req: Request, res: Response, next: NextFunction) {
+        try {
+            const dto = Object.assign(new UserUpdateDto(), req.body);
+            const errors = await validate(dto);
+            
+            if (errors.length) {
+                throw new BadRequestError({ message: 'Validation failed', errors });
+            }
+
+            const userId = parseInt(req.params.id, 10);
+            const result = await service.update(userId, dto);
+            const user: UserResponseDto = userToUserResponseDto(result!)
+            const response: IResponse<UserResponseDto> = {
+                status: 200,
+                message: 'User updated successfully',
+                data: user
+            };
+
+            res.status(200).json(response);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async deleteUser(req: Request, res: Response, next: NextFunction) {
+        try {
+            const userId = parseInt(req.params.id, 10);
+            await service.delete(userId);
+
+            const response: IResponse<null> = {
+                status: 200,
+                message: 'User deleted successfully',
+                data: null
+            };
+
+            res.status(200).json(response);
+        } catch (error) {
+            next(error);
+        }
+    }
+}
