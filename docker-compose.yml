@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   api:
-    container_name: ts-container-api
+    container_name: api-tsrabbitmq
     build: .
     ports:
       - "3000:3000"
@@ -11,14 +11,14 @@ services:
       - /app/node_modules
     command: npm run dev
     depends_on:
-      mysql-ts-container:
+      mysql:
         condition: service_healthy
-      redis-ts-container:
+      redis:
         condition: service_started
 
-  mysql-ts-container:
+  mysql:
     image: mysql:8.0
-    container_name: ts-container-mysql
+    container_name: mysql-tsrabbitmq
     restart: always
     ports:
       - "3306:3306"
@@ -35,9 +35,9 @@ services:
       timeout: 5s
       retries: 10
 
-  redis-ts-container:
+  redis:
     image: redis:7.2
-    container_name: ts-container-redis
+    container_name: redis-tsrabbitmq
     restart: always
     command: redis-server --requirepass redis_pass
     ports:
@@ -45,6 +45,20 @@ services:
     volumes:
       - redis_data:/data
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: rabbitmq-tsrabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbit
+      RABBITMQ_DEFAULT_PASS: rabbit
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
 volumes:
   mysql_data:
   redis_data:
+  rabbitmq_data:
