@@ -57,6 +57,25 @@ services:
       RABBITMQ_DEFAULT_PASS: rabbit
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker_luan:
+    build: .
+    command: npm run worker:luan
+    depends_on:
+      rabbitmq:
+        condition: service_healthy  
+
+  worker_test:
+    build: .
+    command: npm run worker:test
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   mysql_data:

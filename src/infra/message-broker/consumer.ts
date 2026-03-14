@@ -17,5 +17,8 @@ export const consumeMessages = async (queue: string, handler: (msg: string) => v
             // avisa o RabbitMQ que a mensagem foi processada e pode ser removida da fila
             channel.ack(msg);
         }
-    }, { noAck: false });
+    }, 
+    // desabilita ack automático: a mensagem só é removida da fila após channel.ack()
+    // se o consumer cair antes do ack, o RabbitMQ reenfileira a mensagem
+    { noAck: false });
 };

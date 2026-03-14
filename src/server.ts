@@ -2,7 +2,6 @@ import { app } from './app';
 import { AppDataSource } from './database/data-source';
 import { connectRedis } from './infra/cache/redis';
 import { connectRabbitMQ } from './infra/message-broker/rabbitmq';
-import { consumeMessages } from './infra/message-broker/consumer';
 import 'dotenv/config';
 import "reflect-metadata"
 
@@ -25,21 +24,6 @@ async function bootstrap() {
     console.log(`Server is running at http://localhost:${PORT}`);
   });
 
-  await consumeMessages('luan', (msg) => {
-        console.log('================================')
-        console.log(`Mensagem Recebida: ${msg}`);
-        console.log('================================')
-  });
-    await consumeMessages('luan', (msg) => {
-        console.log('================================')
-        console.log(`Mensagem Recebida: ${msg}`);
-        console.log('================================')
-  });
-    await consumeMessages('luan', (msg) => {
-        console.log('================================')
-        console.log(`Mensagem Recebida: ${msg}`);
-        console.log('================================')
-  });
 };
 
 bootstrap();
