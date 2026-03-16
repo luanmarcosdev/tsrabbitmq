@@ -19,6 +19,9 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/database/data-source.ts",
 
     "worker:luan": "ts-node-dev --respawn --transpile-only src/workers/luan.worker.ts",
+    "worker:order:wpp": "ts-node-dev --respawn --transpile-only src/workers/order.whatsapp.worker.ts",
+    "worker:order:mail": "ts-node-dev --respawn --transpile-only src/workers/order.email.worker.ts",
+    "worker:costumer:teste": "ts-node-dev --respawn --transpile-only src/workers/costumer.teste.worker.ts",
     "worker:test": "ts-node-dev --respawn --transpile-only src/workers/test.worker.ts"
   },
   "author": "",
