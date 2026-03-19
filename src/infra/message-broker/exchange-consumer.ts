@@ -30,7 +30,7 @@ export const consumeFromExchange = async (
                 // msg - mensagem a ser rejeitada
                 // allUpTo - true rejeita todas as mensagens ate essa / false rejeita so essa
                 // requeue - true volta para a fila / false descarta ou manda para DLQ
-                channel.nack(msg, false, true);
+                channel.nack(msg, false, false);
             }
         }
     }, { noAck: false });
