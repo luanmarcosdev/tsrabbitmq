@@ -20,10 +20,18 @@ export const consumeFromExchange = async (
 
     console.log(`[*] Waiting on exchange "${exchange}" | key "${routingKey}" | queue "${queue}"`);
 
-    await channel.consume(queue, (msg) => {
+    await channel.consume(queue, async (msg) => {
         if (msg) {
-            handler(msg.content.toString());
-            channel.ack(msg);
+            try {
+                await handler(msg.content.toString());
+                channel.ack(msg);
+            } catch (err) {
+                // channel.nack(msg, allUpTo, requeue);
+                // msg - mensagem a ser rejeitada
+                // allUpTo - true rejeita todas as mensagens ate essa / false rejeita so essa
+                // requeue - true volta para a fila / false descarta ou manda para DLQ
+                channel.nack(msg, false, true);
+            }
         }
     }, { noAck: false });
 };
