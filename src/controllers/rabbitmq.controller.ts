@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { sendMessage } from '../infra/message-broker/producer';
-import { publishToExchange } from '../infra/message-broker/exchange-producer';
+import { publishToExchange } from '../infra/message-broker/producer';
 import { BadRequestError } from '../errors/bad-request.error';
 
 export class RabbitMQController {
@@ -29,7 +29,7 @@ export class RabbitMQController {
         }
     }
 
-        async publishExchangeMessage(req: Request, res: Response, next: NextFunction) {
+    async publishExchangeMessage(req: Request, res: Response, next: NextFunction) {
         try {
             const { message, exchange, routingKey } = req.body;
 

@@ -70,13 +70,6 @@ services:
       rabbitmq:
         condition: service_healthy  
 
-  worker_test:
-    build: .
-    command: npm run worker:test
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-
 volumes:
   mysql_data:
   redis_data:

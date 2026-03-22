@@ -1,11 +1,14 @@
 import { getChannel } from './rabbitmq';
 
-export const sendMessage = (queue: string, msg: string) => {
-    // obtem o canal do RabbitMQ para enviar a mensagem
+export const publishToExchange = (exchange: string, routingKey: string, msg: string) => {
     const channel = getChannel();
-    // garante que a fila existe antes de enviar a mensagem
-    channel.assertQueue(queue, { durable: true });
-    // envia a mensagem para a fila especificada, convertendo a string em um buffer (bytes)
-    channel.sendToQueue(queue, Buffer.from(msg), { persistent : true });
-    console.log(`[INFO]: Sent message: ${msg}`);
+    
+    // Declara a exchange do tipo direct
+    channel.assertExchange(exchange, 'direct', { durable: true });
+    
+    // Publica na exchange com a routing key
+    // Diferente do sendToQueue que aponta para a exchange e não para a fila
+    channel.publish(exchange, routingKey, Buffer.from(msg), { persistent: true });
+    
+    console.log(`[INFO]: Published to exchange "${exchange}" with key "${routingKey}": ${msg}`);
 };

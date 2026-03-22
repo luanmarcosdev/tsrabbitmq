@@ -1,24 +1,68 @@
 import { getChannel } from './rabbitmq';
+import { assertRetryQueue } from './setupRetry';
 
-export const consumeMessages = async (queue: string, handler: (msg: string) => void) => {
+export const consumeFromExchange = async (
+    exchange: string,
+    routingKey: string,
+    queue: string,
+    handler: (msg: string) => void,
+    options?: {
+        maxRetries?: number;
+        retryDelay?: number;
+    }
+) => {
+    const MAX_RETRIES = options?.maxRetries ?? 3;
+    const RETRY_DELAY = options?.retryDelay ?? 5000;
+    
     const channel = getChannel();
-    // Garante que a fila existe antes de consumir as mensagen
-    // define true para durabilidade (fila persiste quando o RabbitMQ for reiniciado)
-    await channel.assertQueue(queue, { durable: true });
 
-    console.log(`[*] Waiting for messages in ${queue}`);
+    await channel.assertExchange(exchange, 'direct', { durable: true });
 
-    // fica ouvindo a fila e processando as mensagens recebidas
-    await channel.consume(queue, (msg) => {
-        if (msg) {
-            // mensagem recebida, processa usando o handler fornecido 
-            // (converte os bytes de volta para string)
-            handler(msg.content.toString());
-            // avisa o RabbitMQ que a mensagem foi processada e pode ser removida da fila
-            channel.ack(msg);
+    // cria a fila de retry apontando de volta para a fila principal
+    await assertRetryQueue(channel, queue, exchange, routingKey, RETRY_DELAY);
+	
+		// configura dlq
+    await channel.assertQueue(queue, {
+        durable: true,
+        arguments: {
+            'x-dead-letter-exchange': 'dlq',
+            'x-dead-letter-routing-key': `${queue}.dlq`
         }
-    }, 
-    // desabilita ack automático: a mensagem só é removida da fila após channel.ack()
-    // se o consumer cair antes do ack, o RabbitMQ reenfileira a mensagem
-    { noAck: false });
+    });
+
+    await channel.bindQueue(queue, exchange, routingKey);
+
+    await channel.consume(queue, async (msg) => {
+        if (msg) {
+            // conta quantas vezes a mensagem já foi retentada
+            const retries = (msg.properties.headers?.['x-retry-count'] ?? 0) as number;
+
+            try {
+                await handler(msg.content.toString());
+                channel.ack(msg);
+            } catch (err) {
+		            // verifica numero de retry
+                if (retries < MAX_RETRIES) {
+                    // ainda tem tentativas → manda para fila de retry
+                    
+                    channel.ack(msg); // remove da fila principal
+
+                    // publica na fila do retry
+                    channel.publish('retry', routingKey, msg.content, {
+                        persistent: true,
+                        headers: {
+                            ...msg.properties.headers,
+                            'x-retry-count': retries + 1 // incrementa o contador
+                        }
+                    });
+
+                    console.warn(`[RETRY]: Tentativa ${retries + 1}/${MAX_RETRIES} | queue: ${queue}`);
+                } else {
+                    // esgotou tentativas → manda para DLQ
+                    channel.nack(msg, false, false);
+                    console.error(`[DLQ]: Esgotou tentativas | queue: ${queue}`);
+                }
+            }
+        }
+    }, { noAck: false });
 };

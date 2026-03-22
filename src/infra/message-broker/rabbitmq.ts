@@ -1,6 +1,7 @@
 // importa a biblioteca amqplib para se conectar ao RabbitMQ e trabalhar com canais
 import amqp, { ChannelModel, Channel } from 'amqplib';
 import { setupDLQ } from './setupDLQ'
+import { setupRetry } from './setupRetry';
 
 let connection: ChannelModel;
 let channel: Channel;
@@ -24,6 +25,7 @@ export const connectRabbitMQ = async (): Promise<void> => {
         // o consumer processa 1 mensagem por vez, só recebe a próxima após o ack
         await channel.prefetch(1);
         await setupDLQ(channel);
+        await setupRetry(channel);
     } catch (err) {
         console.error('[ERROR]: Failed to connect to RabbitMQ:', err);
         throw err;

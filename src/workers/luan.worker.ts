@@ -1,14 +1,18 @@
 import { connectRabbitMQ } from "../infra/message-broker/rabbitmq";
-import { consumeMessages } from "../infra/message-broker/consumer";
+import { consumeFromExchange } from '../infra/message-broker/consumer';
 
 async function startWorker() {
     await connectRabbitMQ(); 
 
-    consumeMessages('luan', (msg) => {
-        console.log(`Mensagem recebida no luan.worker`)
-        console.log(`Mensagem Recebida: ${msg}`);
-        console.log(`Processando mensagem..`)
-    });
+    consumeFromExchange(
+        'events',                           // nome da exchange
+        'order',                            // routing key que esse worker escuta
+        'luan',                             // nome da fila
+        (msg) => {
+            console.log(`[events.luan]: ${msg}`);
+            throw new Error()
+        }
+    );
 }
 
 startWorker();
